@@ -90,4 +90,19 @@ public class StudyController {
         }
     }
 
+    @GetMapping("/mystudylist")
+    public ResponseEntity<?> getMyStudies(@AuthenticationPrincipal PrincipalDetails principalDetails) {
+        if (principalDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        }
+
+        try {
+            // 서비스에서 현재 로그인한 유저의 참여 스터디 목록 조회
+            List<MemberStudyListDTO> myStudies = studyService.getMyStudyList(principalDetails.getMember().getId());
+            return ResponseEntity.ok(myStudies);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("목록을 불러오는 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
 }
