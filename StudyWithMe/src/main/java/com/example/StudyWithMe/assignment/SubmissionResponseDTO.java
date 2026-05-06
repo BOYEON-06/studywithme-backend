@@ -12,7 +12,7 @@ public record SubmissionResponseDTO(
     public static SubmissionResponseDTO from(AssignmentSubmission submission, String memberName) {
         return new SubmissionResponseDTO(
                 submission.getId(),
-                submission.getMemberId(),
+                submission.getMember().getId(),
                 memberName,
                 submission.getContent(),
                 submission.getSubmittedAt()

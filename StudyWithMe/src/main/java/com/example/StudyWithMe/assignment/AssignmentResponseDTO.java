@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public record AssignmentResponseDTO(
         Long studyId,
         Long assignmentId,
+        String creatorName,
         String studyTitle,
         String title,
         String content,
@@ -16,6 +17,7 @@ public record AssignmentResponseDTO(
         return new AssignmentResponseDTO(
                 assignment.getStudyGroup().getId(),
                 assignment.getId(),
+                assignment.getStudyGroup().getCreator().getName(),
                 assignment.getStudyGroup().getTitle(),
                 assignment.getTitle(),
                 assignment.getContent(),

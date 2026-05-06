@@ -1,5 +1,6 @@
 package com.example.StudyWithMe.assignment;
 
+import com.example.StudyWithMe.member.Member;
 import com.example.StudyWithMe.member.MemberRepository;
 import com.example.StudyWithMe.study.StudyGroup;
 import com.example.StudyWithMe.study.StudyGroupRepository;
@@ -37,9 +38,11 @@ public class AssignmentService {
         Assignment assignment = new Assignment(
                 dto.getTitle(),
                 dto.getContent(),
+                dto.getModelAnswer(),
                 dto.getDueDate(),
                 study
         );
+
         return assignmentRepository.save(assignment).getId();
     }
 
@@ -71,9 +74,13 @@ public class AssignmentService {
             throw new IllegalStateException("이미 제출한 과제입니다.");
         }
 
+        // Member 엔티티를 조회해서 전달
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
         AssignmentSubmission submission = new AssignmentSubmission(
                 assignment, // 엔티티 전달
-                memberId,   // 사용자 ID
+                member,   // 사용자 ID
                 content     // 서술형 답안
         );
 
@@ -112,12 +119,37 @@ public class AssignmentService {
         // 4. DTO 변환 (제출자 ID만 있으므로 이름을 찾아 매핑)
         return submissions.stream()
                 .map(s -> {
-                    // Member 엔티티가 올바르게 import 되었는지 확인하세요.
-                    String name = memberRepository.findById(s.getMemberId())
-                            .map(m -> m.getName()) // Member::getName 대신 람다식으로 명시
-                            .orElse("알 수 없는 사용자");
+                    String name = s.getMember().getName(); // 추가 쿼리 없이 바로 접근 가능
                     return SubmissionResponseDTO.from(s, name);
                 })
                 .toList();
     }
+
+    @Transactional
+    public List<LeaderAssignmentResponseDTO> getAssignmentsByLeader(Long leaderId) {
+        // 1. 내가 방장인 모든 과제 리스트 조회
+        List<AssignmentSubmission> submission = submissionRepository.findAllByStudyLeader(leaderId);
+
+        // 2. DTO로 변환
+        return submission.stream()
+                .map(LeaderAssignmentResponseDTO::from)
+                .toList();
+    }
+
+    @Transactional
+    public void gradeSubmission(Long submissionId, GradeRequestDTO dto, Long leaderId) {
+        // 1. 제출물 존재 확인 (성능을 위해 fetch join으로 스터디 정보까지 가져옴)
+        AssignmentSubmission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new IllegalArgumentException("제출된 과제를 찾을 수 없습니다."));
+
+        // 2. 권한 체크: 과제가 속한 스터디의 방장 ID와 요청자 ID 비교
+        StudyGroup studyGroup = submission.getAssignment().getStudyGroup();
+        if (!studyGroup.getCreator().getId().equals(leaderId)) {
+            throw new IllegalStateException("스터디 방장만 채점할 수 있습니다.");
+        }
+
+        // 3. 채점 업데이트
+        submission.updateGrade(dto.score(), dto.feedback());
+    }
+
 }

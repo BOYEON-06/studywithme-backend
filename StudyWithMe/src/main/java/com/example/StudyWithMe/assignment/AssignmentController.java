@@ -1,7 +1,11 @@
 package com.example.StudyWithMe.assignment;
 
+import com.example.StudyWithMe.ai.AiAssignmentResponseDTO;
+import com.example.StudyWithMe.ai.AiParameterDTO;
+import com.example.StudyWithMe.ai.GeminiService;
 import com.example.StudyWithMe.config.PrincipalDetails;
 import com.example.StudyWithMe.study.StudyService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +22,70 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AssignmentController {
     private final AssignmentService assignmentService;
+    private final GeminiService geminiService;
+
+    // AI에게 문제 생성을 요청하는 API (DB 저장 안 함, 단순 제안)
+    @PostMapping("/generate-ai")
+    public ResponseEntity<?> getAiSuggestion(
+            @RequestBody AiParameterDTO request,
+            @AuthenticationPrincipal PrincipalDetails principalDetails
+    ) {
+        if (principalDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "code", "LOGIN_REQUIRED",
+                            "message", "로그인이 필요합니다."
+                    ));
+        }
+
+        try {
+            // 2. request에서 topic을 꺼내서 전달 (변수명 수정)
+            AiAssignmentResponseDTO suggestion = geminiService.generateAssignment(request);
+            return ResponseEntity.ok(suggestion);
+
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            // 구글 API가 에러를 뱉었을 때 (400, 401, 403, 429 등)
+            System.err.println("HTTP 상태 코드: " + e.getStatusCode());
+            System.err.println("에러 본문: " + e.getResponseBodyAsString());
+            throw new RuntimeException("AI API 호출 실패: " + e.getMessage());
+        } catch (Exception e) {
+            // 그 외 일반적인 에러 (네트워크, JSON 파싱 등)
+            e.printStackTrace(); // 상세한 에러 경로 출력
+            throw new RuntimeException("알 수 없는 오류 발생: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{studyId}/confirm-ai")
+    public ResponseEntity<?> confirmAiAssignment(
+            @PathVariable Long studyId,
+            @RequestBody AssignmentRequestDTO dto, // 기존 과제 생성용 DTO를 재사용합니다.
+            @AuthenticationPrincipal PrincipalDetails principalDetails
+    ) {
+        if (principalDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "로그인이 필요합니다."));
+        }
+
+        try {
+            // 기존에 검증 로직이 포함된 서비스 메서드를 그대로 호출하여 DB에 저장합니다.
+            Long assignmentId = assignmentService.createAssignment(
+                    studyId,
+                    dto,
+                    principalDetails.getMember().getId()
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "AI 제안 과제가 성공적으로 출제되었습니다.",
+                    "assignmentId", assignmentId
+            ));
+        } catch (IllegalStateException e) {
+            // 방장 권한이 없는 경우 등
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "과제 저장 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
 
     @PostMapping("/{studyId}")
     public ResponseEntity<?> createAssignment(
@@ -147,6 +215,45 @@ public class AssignmentController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("code", "NOT_LEADER", "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/leader")
+    public ResponseEntity<?> getLeaderAssignments(
+            @AuthenticationPrincipal PrincipalDetails principalDetails
+    ) {
+        if (principalDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            List<LeaderAssignmentResponseDTO> responses =
+                    assignmentService.getAssignmentsByLeader(principalDetails.getMember().getId());
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/submissions/{submissionId}/grade")
+    public ResponseEntity<?> gradeSubmission(
+            @PathVariable Long submissionId,
+            @RequestBody @Valid GradeRequestDTO dto,
+            @AuthenticationPrincipal PrincipalDetails principalDetails
+    ) {
+        if (principalDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            assignmentService.gradeSubmission(
+                    submissionId, dto, principalDetails.getMember().getId()
+            );
+            return ResponseEntity.ok(Map.of("message", "채점이 완료되었습니다."));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

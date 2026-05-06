@@ -23,6 +23,9 @@ public class Assignment {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    @Column(columnDefinition = "TEXT")
+    private String modelAnswer; // 방장 참고용 AI 제안 모범 답안
+
     private LocalDateTime createdAt;
 
     private LocalDateTime dueDate;
@@ -34,9 +37,10 @@ public class Assignment {
     @OneToMany(mappedBy = "assignment", cascade = CascadeType.ALL)
     private List<AssignmentSubmission> submissions = new ArrayList<>();
 
-    public Assignment(String title, String content, LocalDateTime dueDate, StudyGroup studyGroup) {
+    public Assignment(String title, String content, String modelAnswer, LocalDateTime dueDate, StudyGroup studyGroup) {
         this.title = title;
         this.content = content;
+        this.modelAnswer = modelAnswer;
         this.dueDate = dueDate;
         this.studyGroup = studyGroup;
         this.createdAt = LocalDateTime.now();

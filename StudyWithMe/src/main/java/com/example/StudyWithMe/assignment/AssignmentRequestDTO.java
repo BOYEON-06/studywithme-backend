@@ -14,4 +14,6 @@ public class AssignmentRequestDTO {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime dueDate;
+
+    private String modelAnswer;
 }

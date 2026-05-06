@@ -24,6 +24,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/assignments/generate-ai").permitAll()
                         .anyRequest().authenticated()
                 )
 
