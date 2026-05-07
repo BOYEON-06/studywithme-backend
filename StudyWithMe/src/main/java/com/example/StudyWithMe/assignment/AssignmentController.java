@@ -79,11 +79,30 @@ public class AssignmentController {
                     "assignmentId", assignmentId
             ));
         } catch (IllegalStateException e) {
-            // 방장 권한이 없는 경우 등
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
+            // 1. 권한 부족 (스터디장이 아님)
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "code", "NOT_LEADER",
+                            "message", e.getMessage()
+                    ));
+        } catch (IllegalArgumentException e) {
+            // 2. 서비스에서 던진 구체적인 입력 값 에러 (스터디 없음, 마감 기한 과거 등)
+            String errorCode = "INVALID_INPUT";
+            if (e.getMessage().contains("마감 기한")) errorCode = "INVALID_DUE_DATE";
+            if (e.getMessage().contains("스터디")) errorCode = "STUDY_NOT_FOUND";
+
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "code", errorCode,
+                            "message", e.getMessage() // 서비스의 구체적인 메시지 전달
+                    ));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "과제 저장 중 오류가 발생했습니다: " + e.getMessage()));
+            // 3. 기타 예상치 못한 서버 에러
+            return ResponseEntity.internalServerError()
+                    .body(Map.of(
+                            "code", "SERVER_ERROR",
+                            "message", "서버 오류가 발생했습니다."
+                    ));
         }
     }
 
@@ -105,7 +124,7 @@ public class AssignmentController {
                     "assignmentId", assignmentId
             ));
         } catch (IllegalStateException e) {
-            // 1. 권한 부족 (방장이 아님)
+            // 1. 권한 부족 (스터디장이 아님)
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of(
                             "code", "NOT_LEADER",
@@ -229,7 +248,7 @@ public class AssignmentController {
         }
 
         try {
-            List<LeaderAssignmentResponseDTO> responses =
+            List<StudyLeaderGroupResponseDTO> responses =
                     assignmentService.getAssignmentsByLeader(principalDetails.getMember().getId());
             return ResponseEntity.ok(responses);
         } catch (Exception e) {

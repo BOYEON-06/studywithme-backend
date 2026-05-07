@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -126,14 +128,43 @@ public class AssignmentService {
     }
 
     @Transactional
-    public List<LeaderAssignmentResponseDTO> getAssignmentsByLeader(Long leaderId) {
-        // 1. 내가 방장인 모든 과제 리스트 조회
-        List<AssignmentSubmission> submission = submissionRepository.findAllByStudyLeader(leaderId);
+    public List<StudyLeaderGroupResponseDTO> getAssignmentsByLeader(Long leaderId) {
+        // 1. 내가 스터디장인 모든 과제 리스트 조회
+        List<AssignmentSubmission> submissions = submissionRepository.findAllByStudyLeader(leaderId);
 
-        // 2. DTO로 변환
-        return submission.stream()
-                .map(LeaderAssignmentResponseDTO::from)
-                .toList();
+        // 2. 스터디별 그룹화 -> 과제별 그룹화 진행
+        return submissions.stream()
+                .collect(Collectors.groupingBy(s -> s.getAssignment().getStudyGroup()))
+                .entrySet().stream()
+                .map(studyEntry -> {
+                    StudyGroup study = studyEntry.getKey();
+
+                    // 3. 해당 스터디 내에서 과제(Assignment)별로 제출물(Submission)을 묶음
+                    Map<Assignment, List<AssignmentSubmission>> groupByAssignment =
+                            studyEntry.getValue().stream()
+                                    .collect(Collectors.groupingBy(AssignmentSubmission::getAssignment));
+
+                    List<AssignmentGroupResponseDTO> assignmentGroups = groupByAssignment.entrySet().stream()
+                            .map(assignEntry -> {
+                                Assignment assignment = assignEntry.getKey();
+
+                                // 기존 AssignmentResponseDTO 활용
+                                AssignmentResponseDTO assignmentDto = AssignmentResponseDTO.of(assignment, true);
+
+                                // 기존 SubmissionResponseDTO 활용
+                                List<SubmissionResponseDTO> submissionDtos = assignEntry.getValue().stream()
+                                        .map(s -> SubmissionResponseDTO.from(s, s.getMember().getName()))
+                                        .toList();
+
+                                return new AssignmentGroupResponseDTO(assignmentDto, submissionDtos);
+                            }).toList();
+
+                    return new StudyLeaderGroupResponseDTO(
+                            study.getId(),
+                            study.getTitle(),
+                            assignmentGroups
+                    );
+                }).toList();
     }
 
     @Transactional
