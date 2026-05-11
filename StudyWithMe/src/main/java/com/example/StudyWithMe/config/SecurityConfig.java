@@ -48,7 +48,7 @@ public class SecurityConfig {
                 )
 
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
                 );
         return http.build();
     }
@@ -57,9 +57,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 프론트엔드 실제 주소를 명시
-        configuration.addAllowedOrigin("http://localhost:5173");
-        configuration.addAllowedOriginPattern("http://localhost:5173");
+        //모든 주소로 부터 요청 허용
+        configuration.addAllowedOriginPattern("*");
 
         // 2. 모든 메서드와 헤더 허용
         configuration.addAllowedMethod("*");
