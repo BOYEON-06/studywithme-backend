@@ -19,7 +19,7 @@ public class ChatMessage {
     private Long id;
 
     private Long studyId; // 어떤 스터디의 채팅인지
-    private String sender; // 보낸 사람 이름 혹은 닉네임
+    private String sender; // 보낸 사람 이름
     private String message;
     private LocalDateTime timestamp;
 

@@ -11,7 +11,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -63,6 +66,30 @@ public class ChatController {
                     .body(Map.of(
                             "code", "SERVER_ERROR",
                             "message", "서버 오류가 발생했습니다."
+                    ));
+        }
+    }
+
+    @GetMapping("/api/chat/{studyId}/history")
+    public ResponseEntity<?> getChatHistory(
+            @PathVariable Long studyId,
+            @AuthenticationPrincipal PrincipalDetails principalDetails
+    ) {
+        // 1. 로그인 체크
+        if (principalDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        }
+
+        // 2. 권한 체크
+        // chatService에 권한 체크 로직을 공통화 하는 게 나을 것 같음 (추후 변경 필요)
+        try {
+            List<ChatResponseDTO> history = chatService.getChatHistory(studyId, principalDetails.getMember().getId());
+            return ResponseEntity.ok(history);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "code", "NOT_YOUR_STUDY",
+                            "message", e.getMessage()
                     ));
         }
     }
