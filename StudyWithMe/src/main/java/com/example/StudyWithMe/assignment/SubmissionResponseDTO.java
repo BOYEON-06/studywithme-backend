@@ -7,7 +7,10 @@ public record SubmissionResponseDTO(
         Long memberId,
         String memberName, // 제출자 이름
         String content,    // 제출 내용
-        LocalDateTime submittedAt // 제출 시간
+        LocalDateTime submittedAt, // 제출 시간
+        Integer score,
+        String feedback,
+        LocalDateTime gradedAt
 ) {
     public static SubmissionResponseDTO from(AssignmentSubmission submission, String memberName) {
         return new SubmissionResponseDTO(
@@ -15,7 +18,10 @@ public record SubmissionResponseDTO(
                 submission.getMember().getId(),
                 memberName,
                 submission.getContent(),
-                submission.getSubmittedAt()
+                submission.getSubmittedAt(),
+                submission.getScore(),
+                submission.getFeedback(),
+                submission.getGradedAt()
         );
     }
 }

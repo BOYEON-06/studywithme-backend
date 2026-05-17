@@ -57,8 +57,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        //모든 주소로 부터 요청 허용
-        configuration.addAllowedOriginPattern("*");
+        // 프론트엔드 실제 주소를 명시
+        configuration.addAllowedOrigin("http://localhost:5173");
+        configuration.addAllowedOriginPattern("http://localhost:5173");
+        configuration.addAllowedOriginPattern("http://34.22.71.200");
 
         // 2. 모든 메서드와 헤더 허용
         configuration.addAllowedMethod("*");
