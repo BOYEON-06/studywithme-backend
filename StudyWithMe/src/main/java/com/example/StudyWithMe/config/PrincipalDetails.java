@@ -3,9 +3,12 @@ package com.example.StudyWithMe.config;
 import com.example.StudyWithMe.member.Member;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.ArrayList;
-public class PrincipalDetails implements UserDetails {
+public class PrincipalDetails implements UserDetails, Serializable {
+    private static final long serialVersionUID = 1L;
 
     private final Member member; // 불변성 유지
 
