@@ -61,6 +61,7 @@ public class SecurityConfig {
         configuration.addAllowedOrigin("http://localhost:5173");
         configuration.addAllowedOriginPattern("http://localhost:5173");
         configuration.addAllowedOriginPattern("http://34.22.71.200");
+        configuration.addAllowedOriginPattern("http://9090");
 
         // 2. 모든 메서드와 헤더 허용
         configuration.addAllowedMethod("*");
