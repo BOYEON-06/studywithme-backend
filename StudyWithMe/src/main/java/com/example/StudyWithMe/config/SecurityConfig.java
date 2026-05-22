@@ -36,16 +36,16 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                .formLogin(form -> form
-                        .loginProcessingUrl("/api/auth/login")
-                        .usernameParameter("name")
-                        .successHandler((request, response, authentication) -> {
-                            response.setStatus(200);
-                        })
-                        .failureHandler((request, response, exception) -> {
-                            response.sendError(401, "Login Failed");
-                        })
-                )
+//                .formLogin(form -> form
+//                        .loginProcessingUrl("/api/auth/login")
+//                        .usernameParameter("name")
+//                        .successHandler((request, response, authentication) -> {
+//                            response.setStatus(200);
+//                        })
+//                        .failureHandler((request, response, exception) -> {
+//                            response.sendError(401, "Login Failed");
+//                        })
+//                )
 
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
