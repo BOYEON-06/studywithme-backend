@@ -28,6 +28,7 @@ public class Assignment {
 
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
     private LocalDateTime dueDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
