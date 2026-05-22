@@ -1,5 +1,6 @@
 package com.example.StudyWithMe.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,9 +27,15 @@ public class SecurityConfig {
                 // 1. CORS 설정을 Security 필터 체인에 추가
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
+
+                // 인증 실패 시 401 에러 반환
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                        })
+                )
 
                 .authorizeHttpRequests(auth -> auth
                         // OPTIONS 메서드는 CORS를 위해 모두 허용
