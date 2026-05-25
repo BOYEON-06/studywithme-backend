@@ -41,5 +41,24 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          # 1. 기존 9090 포트 프로세스 종료
           sudo fuser -k 9090/tcp || true
-          nohup java -jar /home/coj2025403/app/backend/*.jar --server.port=9090 --server.address=0.0.0.0 > nohup.out 2>&1 &
+          
+          # 2. 전송된 파일 위치 확인 및 정리
+          # scp로 들어온 새 jar 파일이 build/libs 폴더 안에 안전하게 있는지 확인하고 꺼냄
+          sleep 2
+          if [ -d "/home/coj2025403/app/backend/build/libs" ]; then
+              # 꺼내기 전에 하위 폴더 밖(backend/)에 남아있던 구버전 jar들만 제거
+              rm -f /home/coj2025403/app/backend/*.jar
+              
+              # 새 jar 파일을 상위 폴더로 이동
+              mv /home/coj2025403/app/backend/build/libs/*.jar /home/coj2025403/app/backend/
+              
+              # 임시 build 폴더 삭제
+              rm -rf /home/coj2025403/app/backend/build
+          else
+              echo "Warning: build/libs directory not found. Check scp-action transfer paths."
+          fi
+          
+          # 3. 스프링부트 재실행
+          nohup java -jar /home/coj2025403/app/backend/*.jar --server.port=9090 --server.address=0.0.0.0 > /home/coj2025403/app/backend/nohup.out 2>&1 &
