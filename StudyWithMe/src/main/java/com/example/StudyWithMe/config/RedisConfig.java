@@ -6,11 +6,12 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
 
 @Configuration
-@EnableRedisHttpSession // Spring Session Redis 활성화 어노테이션
+@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 1800) // 💡 세션 만료 시간 30분 설정
 public class RedisConfig {
 
     @Value("${spring.data.redis.host}")
@@ -29,14 +30,18 @@ public class RedisConfig {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory());
 
-        // 일반 Key-Value 사용 시 직렬화 설정
+        // 일반 Key-Value 및 Hash 구조 직렬화 설정
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(org.springframework.data.redis.serializer.RedisSerializer.json());
-
-        // Hash 구조 사용 시 직렬화 설정
+        redisTemplate.setValueSerializer(RedisSerializer.json());
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(org.springframework.data.redis.serializer.RedisSerializer.json());
+        redisTemplate.setHashValueSerializer(RedisSerializer.json());
 
         return redisTemplate;
+    }
+    
+    @Bean
+    public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
+        // 내부적으로 최신 버전의 Jackson JSON 직렬화 도구를 생성해 줍니다.
+        return RedisSerializer.json();
     }
 }
