@@ -1,8 +1,8 @@
-name: Backend CD (Develop Branch)
+name: Backend CD (Server Branch)
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "Server" ]
 
 jobs:
   deploy:
