@@ -3,6 +3,7 @@ package com.example.StudyWithMe.reservation;
 import com.example.StudyWithMe.ai.AiAssignmentResponseDTO;
 import com.example.StudyWithMe.ai.AiParameterDTO;
 import com.example.StudyWithMe.ai.GeminiService;
+import com.example.StudyWithMe.assignment.StudyLeaderGroupResponseDTO;
 import com.example.StudyWithMe.config.PrincipalDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 @RestController
 @RequestMapping("/api/reservation-tasks")
@@ -89,4 +91,22 @@ public class ReservationController {
         reservationService.submitTask(taskId, userId, request);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/leader")
+    public ResponseEntity<?> getLeaderAssignments(
+            @AuthenticationPrincipal PrincipalDetails principalDetails
+    ) {
+        if (principalDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            List<StudyLeaderGroupResponseDTO> responses =
+                    assignmentService.getAssignmentsByLeader(principalDetails.getMember().getId());
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }
