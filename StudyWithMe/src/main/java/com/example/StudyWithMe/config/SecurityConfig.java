@@ -71,7 +71,8 @@ public class SecurityConfig {
         // 프론트엔드 실제 주소를 명시
         configuration.addAllowedOrigin("http://localhost:5173");
         configuration.addAllowedOriginPattern("http://localhost:5173");
-        configuration.addAllowedOriginPattern("http://34.22.71.200");
+        configuration.addAllowedOrigin("http://34.22.71.200");
+        configuration.addAllowedOrigin("http://34.22.71.200:9090");
         configuration.addAllowedOriginPattern("http://localhost:9090");
 
         // 2. 모든 메서드와 헤더 허용
@@ -82,6 +83,7 @@ public class SecurityConfig {
         configuration.setAllowCredentials(true);
 
         // 4. 브라우저가 응답 헤더에 접근할 수 있도록 노출 (필요 시)
+        configuration.addExposedHeader("Set-Cookie");
         configuration.addExposedHeader("Authorization");
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
