@@ -42,4 +42,4 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           sudo fuser -k 9090/tcp || true
-          nohup java -jar /home/${{ secrets.SERVER_USER }}/app/backend/nohup.out 2>&1 &
+          nohup java -jar /home/${{ secrets.SERVER_USER }}/app/backend/*.jar > /home/${{ secrets.SERVER_USER }}/app/backend/nohup.out 2>&1 &
