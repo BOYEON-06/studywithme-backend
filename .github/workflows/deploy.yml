@@ -41,5 +41,5 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          sudo fuser -k 8080/tcp || true
+          sudo fuser -k 9090/tcp || true
           nohup java -jar /home/${{ secrets.SERVER_USER }}/app/backend/*.jar > /dev/null 2>&1 &
