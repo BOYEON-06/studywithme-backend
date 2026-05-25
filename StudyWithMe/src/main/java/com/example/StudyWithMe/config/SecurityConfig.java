@@ -41,6 +41,7 @@ public class SecurityConfig {
                         // OPTIONS 메서드는 CORS를 위해 모두 허용
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 
+                        .requestMatchers("/api/auth/continue").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/assignments/**").permitAll()
                         .anyRequest().authenticated()
@@ -58,7 +59,7 @@ public class SecurityConfig {
 //                )
 
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 );
         return http.build();
     }
@@ -71,7 +72,7 @@ public class SecurityConfig {
         configuration.addAllowedOrigin("http://localhost:5173");
         configuration.addAllowedOriginPattern("http://localhost:5173");
         configuration.addAllowedOriginPattern("http://34.22.71.200");
-        configuration.addAllowedOriginPattern("http://9090");
+        configuration.addAllowedOriginPattern("http://localhost:9090");
 
         // 2. 모든 메서드와 헤더 허용
         configuration.addAllowedMethod("*");
