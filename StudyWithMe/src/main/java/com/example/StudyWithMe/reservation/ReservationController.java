@@ -92,21 +92,21 @@ public class ReservationController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/leader")
-    public ResponseEntity<?> getLeaderAssignments(
-            @AuthenticationPrincipal PrincipalDetails principalDetails
-    ) {
-        if (principalDetails == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        try {
-            List<StudyLeaderGroupResponseDTO> responses =
-                    assignmentService.getAssignmentsByLeader(principalDetails.getMember().getId());
-            return ResponseEntity.ok(responses);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
+//    @GetMapping("/leader")
+//    public ResponseEntity<?> getLeaderAssignments(
+//            @AuthenticationPrincipal PrincipalDetails principalDetails
+//    ) {
+//        if (principalDetails == null) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        }
+//
+//        try {
+//            List<StudyLeaderGroupResponseDTO> responses =
+//                    assignmentService.getAssignmentsByLeader(principalDetails.getMember().getId());
+//            return ResponseEntity.ok(responses);
+//        } catch (Exception e) {
+//            return ResponseEntity.badRequest().body(e.getMessage());
+//        }
+//    }
 
 }
