@@ -6,6 +6,7 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
@@ -30,18 +31,18 @@ public class RedisConfig {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory());
 
-        // 일반 Key-Value 및 Hash 구조 직렬화 설정
+        // 일반 RedisTemplate용 직렬화 (필요에 따라 유지하거나 변경)
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(RedisSerializer.json());
+        redisTemplate.setValueSerializer(new JdkSerializationRedisSerializer()); // 자바 표준 직렬화로 변경
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-        redisTemplate.setHashValueSerializer(RedisSerializer.json());
+        redisTemplate.setHashValueSerializer(new JdkSerializationRedisSerializer()); // 자바 표준 직렬화로 변경
 
         return redisTemplate;
     }
     
     @Bean
     public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
-        // 내부적으로 최신 버전의 Jackson JSON 직렬화 도구를 생성해 줍니다.
-        return RedisSerializer.json();
+        // 기존 RedisSerializer.json() 대신 자바 표준 직렬화(JDK) 보안/직렬화 도구 사용
+        return new JdkSerializationRedisSerializer();
     }
 }
