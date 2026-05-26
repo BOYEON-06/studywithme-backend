@@ -1,8 +1,8 @@
-name: Backend CD (Develop Branch)
+name: Backend CD (Server Branch)
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "Server" ]
 
 jobs:
   deploy:
@@ -24,6 +24,9 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew clean build -x test
 
+    - name: Remove plain.jar
+      run: rm -f build/libs/*-plain.jar
+
     - name: Deploy to Backend Servers
       uses: appleboy/scp-action@master
       with:
@@ -34,12 +37,56 @@ jobs:
         target: "/home/${{ secrets.SERVER_USER }}/app/backend"
         strip_components: 2
 
-    - name: Restart Application
+# ---------------------------------------------------
+    # 🔥 1. 서버 1번 전용 재시작 스텝
+    # ---------------------------------------------------
+    - name: Restart Application on Server 1
       uses: appleboy/ssh-action@master
+      env:
+        DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        DB_PW: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
       with:
-        host: ${{ secrets.SERVER_IP_1 }},${{ secrets.SERVER_IP_2 }}
+        host: ${{ secrets.SERVER_IP_1 }} # 👈 1번 IP만!
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        envs: DB_URL, DB_PW, GEMINI_KEY
         script: |
-          sudo fuser -k 8080/tcp || true
-          nohup java -jar /home/${{ secrets.SERVER_USER }}/app/backend/*.jar > /dev/null 2>&1 &
+          sudo fuser -k -9 9090/tcp || true
+          sleep 2
+          if [ -d "/home/coj2025403/app/backend/build/libs" ]; then
+              rm -f /home/coj2025403/app/backend/*.jar
+              mv /home/coj2025403/app/backend/build/libs/*.jar /home/coj2025403/app/backend/
+              rm -rf /home/coj2025403/app/backend/build
+          fi
+          export SUPABASE_DB_URL=$DB_URL
+          export SUPABASE_DB_PASSWORD=$DB_PW
+          export GEMINI_API_KEY=$GEMINI_KEY
+          nohup java -jar /home/coj2025403/app/backend/*.jar --server.port=9090 --server.address=0.0.0.0 > /home/coj2025403/app/backend/nohup.out 2>&1 &
+
+    # ---------------------------------------------------
+    # 🔥 2. 서버 2번 전용 재시작 스텝 (위랑 똑같이 복붙 후 IP만 2번으로 변경!)
+    # ---------------------------------------------------
+    - name: Restart Application on Server 2
+      uses: appleboy/ssh-action@master
+      env:
+        DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        DB_PW: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
+      with:
+        host: ${{ secrets.SERVER_IP_2 }} # 👈 2번 IP만!
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        envs: DB_URL, DB_PW, GEMINI_KEY
+        script: |
+          sudo fuser -k -9 9090/tcp || true
+          sleep 2
+          if [ -d "/home/coj2025403/app/backend/build/libs" ]; then
+              rm -f /home/coj2025403/app/backend/*.jar
+              mv /home/coj2025403/app/backend/build/libs/*.jar /home/coj2025403/app/backend/
+              rm -rf /home/coj2025403/app/backend/build
+          fi
+          export SUPABASE_DB_URL=$DB_URL
+          export SUPABASE_DB_PASSWORD=$DB_PW
+          export GEMINI_API_KEY=$GEMINI_KEY
+          nohup java -jar /home/coj2025403/app/backend/*.jar --server.port=9090 --server.address=0.0.0.0 > /home/coj2025403/app/backend/nohup.out 2>&1 &
