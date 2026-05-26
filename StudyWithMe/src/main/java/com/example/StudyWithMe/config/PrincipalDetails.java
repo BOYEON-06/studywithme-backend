@@ -1,42 +1,46 @@
 package com.example.StudyWithMe.config;
 
-import com.example.StudyWithMe.member.Member;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.ArrayList;
+import java.util.Collection;
 
 @Getter
+@JsonIgnoreProperties(ignoreUnknown = true, value = {"hibernateLazyInitializer", "handler"})
 public class PrincipalDetails implements UserDetails, Serializable {
     private static final long serialVersionUID = 1L;
 
-    private final Member member; // 불변성 유지
+    private final MemberSessionDTO memberSessionDTO;
 
-    public PrincipalDetails(Member member) {
-        this.member = member;
+    // Jackson 3.x가 JSON 데이터를 읽어와 이 객체를 생성할 수 있도록 전용 생성자(JsonCreator)를 명시
+    // final 필드가 있어서 기본 생성자를 만들지 못하므로, 이 방식이 가장 완벽하고 안전
+    @JsonCreator
+    public PrincipalDetails(@JsonProperty("memberSessionDTO") MemberSessionDTO memberSessionDTO) {
+        this.memberSessionDTO = memberSessionDTO;
     }
 
-    public Member getMember() {
-        return member;
+    public MemberSessionDTO getSessionMember() {
+        return memberSessionDTO;
     }
 
-    // 사용자가 입력한 비번과 비교하기 위해 엔티티의 비번을 반환해야 함
     @Override
     public String getPassword() {
-        return member.getPassword();
+        return memberSessionDTO.getPassword();
     }
 
     @Override
     public String getUsername() {
-        return member.getName();
+        return memberSessionDTO.getName();
     }
 
-    // 계정 상태 관련 설정 (보통은 모두 true)
     @Override
     public boolean isAccountNonExpired() {
         return true;
@@ -60,8 +64,8 @@ public class PrincipalDetails implements UserDetails, Serializable {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Collection<GrantedAuthority> collect = new ArrayList<>();
-        // 권한이 필요하다면 아래와 같이 추가 (예: ROLE_USER)
-        // collect.add(() -> "ROLE_USER");
+        // 로그인한 모든 사용자에게 'ROLE_USER' 권한을 기본으로 부여
+        collect.add(new SimpleGrantedAuthority("ROLE_USER"));
         return collect;
     }
 }

@@ -1,6 +1,7 @@
 package com.example.StudyWithMe.config;
 
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,13 +9,17 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.session.web.http.SessionRepositoryFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+    private final SessionRepositoryFilter<?> sessionRepositoryFilter;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -24,7 +29,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 1. CORS 설정을 Security 필터 체인에 추가
+                // 💡 [핵심] 주입받은 레디스 세션 필터를 시큐리티 최상단에 배치하여 톰캣의 세션 가로채기를 완벽히 막습니다.
+                .addFilterBefore(sessionRepositoryFilter, org.springframework.security.web.context.SecurityContextHolderFilter.class)
+
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
@@ -37,30 +44,30 @@ public class SecurityConfig {
                         })
                 )
 
-                .authorizeHttpRequests(auth -> auth
-                        // OPTIONS 메서드는 CORS를 위해 모두 허용
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                // 세션 보관소 명시 설정
+                .securityContext(context -> context
+                        .securityContextRepository(new HttpSessionSecurityContextRepository())
+                )
 
-                        .requestMatchers("/api/auth/continue").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/continue", "/api/auth/**").permitAll()
+
+                        .requestMatchers("/api/studies/**").permitAll()
                         .requestMatchers("/api/assignments/**").permitAll()
+
+                        .requestMatchers("/api/reservation-tasks/**").permitAll()
+
+                        .requestMatchers("/api/chat/**").permitAll()
+
+                        .requestMatchers("/ws-stomp/**").permitAll()
+
                         .anyRequest().authenticated()
                 )
 
-//                .formLogin(form -> form
-//                        .loginProcessingUrl("/api/auth/login")
-//                        .usernameParameter("name")
-//                        .successHandler((request, response, authentication) -> {
-//                            response.setStatus(200);
-//                        })
-//                        .failureHandler((request, response, exception) -> {
-//                            response.sendError(401, "Login Failed");
-//                        })
-//                )
-
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
                 );
+
         return http.build();
     }
 

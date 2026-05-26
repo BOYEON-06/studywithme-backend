@@ -3,7 +3,6 @@ package com.example.StudyWithMe.member;
 import com.example.StudyWithMe.config.PrincipalDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -51,8 +50,14 @@ public class AuthController {
         ContinueRequestDTO result = memberService.loginOrJoin(request.getName(), request.getPassword());
         Member member = result.getMember();
 
-        // 2. Spring Security 세션 강제 생성
-        PrincipalDetails principalDetails = new PrincipalDetails(member);
+        com.example.StudyWithMe.config.MemberSessionDTO sessionDto = new com.example.StudyWithMe.config.MemberSessionDTO(
+                member.getId(),
+                member.getName(),
+                member.getPassword()
+        );
+
+        // 2. Spring Security 세션 강제 생성 (엔티티 대신 DTO 장착)
+        PrincipalDetails principalDetails = new PrincipalDetails(sessionDto);
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 principalDetails,
                 null,
@@ -66,6 +71,8 @@ public class AuthController {
 
         // 스프링 시큐리티 6 규격에 맞게 리포지토리를 통해 세션에 확실히 저장
         securityContextRepository.saveContext(context, httpRequest, response);
+
+        httpRequest.getSession().setAttribute("LOGIN_USER", sessionDto);
 
         return ResponseEntity.ok(Map.of(
                 "user", new MemberResponseDTO(member),
