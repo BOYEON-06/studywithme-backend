@@ -38,8 +38,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "StudyWithMe/build/libs/*.jar" # 폴더 경로 포함하여 전송
-          target: "/home/${{ secrets.SERVER_USER }}/app/"
-          strip_components: 1 # 경로 정리를 위해 1로 수정
+          target: "/home/coj2025403/app/backend/"
+          strip_components: 3
 
       - name: Restart Application on ALL Servers
         uses: appleboy/ssh-action@master
