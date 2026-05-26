@@ -29,23 +29,36 @@ public class ReservationController {
 
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("code", "LOGIN_REQUIRED", "message", "로그인이 필요합니다."));
+                    .body(Map.of(
+                            "code", "LOGIN_REQUIRED",
+                            "message", "로그인이 필요합니다."
+                    ));
         }
+
         try {
             AiAssignmentResponseDTO suggestion = geminiService.generateAssignment(request);
             return ResponseEntity.ok(suggestion);
-        } catch (Exception e) {
+
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            System.err.println("HTTP 상태 코드: " + e.getStatusCode());
+            System.err.println("에러 본문: " + e.getResponseBodyAsString());
             throw new RuntimeException("AI API 호출 실패: " + e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("알 수 없는 오류 발생: " + e.getMessage());
         }
     }
 
     @PostMapping("/{studyId}/confirm-ai")
-    public ResponseEntity<?> confirmAiReservationTask(
+    public ResponseEntity<?> confirmAiAssignment(
             @PathVariable Long studyId,
             @RequestBody ReservationRequestDTO dto,
             HttpSession session // 💡 변경: HttpSession 주입
     ) {
-        Long userId = SessionUtil.getLoginUserId(session); // 💡 변경: 세션 유틸 적용
+        System.out.println("세션 ID: " + session.getId());
+        System.out.println("세션 내 유저 ID: " + session.getAttribute("YOUR_SESSION_KEY"));
+
+        Long userId = SessionUtil.getLoginUserId(session);
 
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -53,27 +66,38 @@ public class ReservationController {
         }
 
         try {
-            Long taskId = reservationService.createReservationTask(
+            Long assignmentId = reservationService.createReservationTask(
                     studyId,
                     dto,
                     userId // 💡 변경: 추출한 userId 전달
             );
 
             return ResponseEntity.ok(Map.of(
-                    "message", "실시간 예약 과제가 성공적으로 등록되었습니다.",
-                    "reservationTaskId", taskId
+                    "message", "AI 제안 과제가 성공적으로 출제되었습니다.",
+                    "assignmentId", assignmentId
             ));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("code", "NOT_LEADER", "message", e.getMessage()));
+                    .body(Map.of(
+                            "code", "NOT_LEADER",
+                            "message", e.getMessage()
+                    ));
         } catch (IllegalArgumentException e) {
             String errorCode = "INVALID_INPUT";
-            if (e.getMessage().contains("시간") || e.getMessage().contains("기한")) errorCode = "INVALID_TIME_RANGE";
+            if (e.getMessage().contains("마감 기한")) errorCode = "INVALID_DUE_DATE";
             if (e.getMessage().contains("스터디")) errorCode = "STUDY_NOT_FOUND";
 
-            return ResponseEntity.badRequest().body(Map.of("code", errorCode, "message", e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "code", errorCode,
+                            "message", e.getMessage()
+                    ));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("code", "SERVER_ERROR", "message", "서버 오류"));
+            return ResponseEntity.internalServerError()
+                    .body(Map.of(
+                            "code", "SERVER_ERROR",
+                            "message", "서버 오류가 발생했습니다."
+                    ));
         }
     }
 
