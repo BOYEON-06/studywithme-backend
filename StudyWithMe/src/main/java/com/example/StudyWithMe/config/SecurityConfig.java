@@ -31,7 +31,7 @@ public class SecurityConfig {
 
         http
                 .headers(headers -> headers
-                        .frameOptions(frame -> frame.sameOrigin()) // 💡 핵심: 같은 도메인에서의 iframe 접근은 허용!
+                        .frameOptions(frameOptions -> frameOptions.disable())
                 )
                 // 💡 [핵심] 주입받은 레디스 세션 필터를 시큐리티 최상단에 배치하여 톰캣의 세션 가로채기를 완벽히 막습니다.
                 .addFilterBefore(sessionRepositoryFilter, org.springframework.security.web.context.SecurityContextHolderFilter.class)
