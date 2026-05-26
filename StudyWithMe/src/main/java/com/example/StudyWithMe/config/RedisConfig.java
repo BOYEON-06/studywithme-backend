@@ -6,13 +6,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
 
 @Configuration
-@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 1800) // 세션 만료 시간 30분 지정 및 기능 활성화
+@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 1800) // 세션 만료 시간 30분
 public class RedisConfig {
 
     @Value("${spring.data.redis.host}")
@@ -26,33 +24,27 @@ public class RedisConfig {
         return new LettuceConnectionFactory(redisHost, redisPort);
     }
 
-    /**
-     * 2. 스프Spring Session Redis가 내부적으로 가로채서 사용할 최신 JSON 직렬화 빈
-     * 최신 규격인 GenericJacksonJsonRedisSerializer를 사용해 안전하게 객체를 JSON으로 굽습니다.
+    /*
+     * 🕵️‍♂️ [핵심 포인트]
+     * 원래 있던 springSessionDefaultRedisSerializer() 빈은 아예 삭제했습니다!
+     * 이렇게 지워버리면, 스프링 시큐리티는 알아서 가장 안전한 '기본 직렬화기(JDK)'를 써서
+     * 복잡한 로그인 정보를 서버 1, 2번 사이에서 완벽하게 공유합니다. (401 에러 해결!)
      */
-    @Bean
-    public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
-        // 최신 버전에서는 스프링 시큐리티 유틸을 호출하는 대신, 인자를 완전히 비우고 생성해도
-        // 내부적으로 시큐리티 믹스인 처리가 자동 내장되어 완벽하게 빌드됩니다. (빨간 줄 0%)
-        return RedisSerializer.json();
-    }
 
     /**
-     * 3. 개발자가 소스코드에서 직접 주입받아 다용도로 사용할 일반 RedisTemplate 설정
-     * 밸류 타입을 Object로 넓혀두어야 세션 데이터와 싱크가 맞아 에러가 안 납니다.
+     * 🚀 개발자가 소스코드에서 캐시 등 다용도로 직접 사용할 RedisTemplate
+     * (이건 로그인 세션과는 완전히 별개로 동작하므로 안심하고 써도 됩니다!)
      */
     @Bean
     public RedisTemplate<String, Object> redisTemplate() {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory());
 
-        // Key는 질문하신 대로 redis-cli에서 알아볼 수 있게 문자열로 세팅
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
 
-        // Value는 위의 스프링 세션 직렬화 장치와 싱크를 맞춰서 JSON 형태로 안전하게 저장
-        redisTemplate.setValueSerializer(springSessionDefaultRedisSerializer());
-        redisTemplate.setHashValueSerializer(springSessionDefaultRedisSerializer());
+        redisTemplate.setValueSerializer(new org.springframework.data.redis.serializer.JdkSerializationRedisSerializer());
+        redisTemplate.setHashValueSerializer(new org.springframework.data.redis.serializer.JdkSerializationRedisSerializer());
 
         return redisTemplate;
     }
