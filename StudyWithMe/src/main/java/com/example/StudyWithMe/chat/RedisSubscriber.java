@@ -12,7 +12,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 @Service
 public class RedisSubscriber implements MessageListener {
-    
+
     private final ObjectMapper redisObjectMapper;
     private final SimpMessagingTemplate messagingTemplate;
 

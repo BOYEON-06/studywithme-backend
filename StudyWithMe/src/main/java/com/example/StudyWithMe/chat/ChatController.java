@@ -10,11 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +29,8 @@ public class ChatController {
     private final ChatService chatService;
     private final ChannelTopic channelTopic;
 
+    private final SimpMessagingTemplate messagingTemplate;
+
     @MessageMapping("/chat/{studyId}")
     public void sendMessage(
             @DestinationVariable Long studyId,
@@ -34,14 +38,19 @@ public class ChatController {
     ) {
         Long userId = SessionUtil.getLoginUserIdFromSecurityContext();
 
+        // 1. 로그인 체크
         if (userId == null) {
-            // 웹소켓에서는 에러를 알리려면 특정 경로로 에러 메시지를 발행해야 합니다.
-            // 일단은 여기서는 무시하거나 로그를 찍는 것이 안전합니다.
+            Map<String, Object> errorPayload = new HashMap<>();
+            errorPayload.put("code", "LOGIN_REQUIRED");
+            errorPayload.put("message", "로그인이 필요합니다.");
+
+            // (Object) 캐스팅 추가
+            messagingTemplate.convertAndSend("/topic/errors/anonymous", (Object) errorPayload);
             return;
         }
 
         try {
-            // 1. DB 저장
+            // 2. DB 저장
             ChatMessage savedMessage = chatService.saveMessage(
                     studyId,
                     payload.get("sender"),
@@ -49,12 +58,16 @@ public class ChatController {
                     userId
             );
 
-            // 2. Redis로 메시지 발행 (이게 구독자들에게 전파됨)
+            // 3. Redis로 메시지 발행
             redisPublisher.publish(channelTopic, ChatResponseDTO.fromEntity(savedMessage));
 
+        } catch (IllegalArgumentException e) {
+            sendError(String.valueOf(userId), "STUDY_NOT_FOUND", e.getMessage());
+        } catch (AccessDeniedException e) {
+            sendError(String.valueOf(userId), "NOT_YOUR_STUDY", e.getMessage());
         } catch (Exception e) {
-            // 웹소켓 처리 중 에러 발생 시 로그 기록
-            log.error("채팅 전송 실패: ", e);
+            log.error("채팅 전송 중 서버 오류 발생: ", e);
+            sendError(String.valueOf(userId), "SERVER_ERROR", "채팅 전송 중 오류가 발생했습니다.");
         }
     }
 
@@ -82,5 +95,14 @@ public class ChatController {
                             "message", e.getMessage()
                     ));
         }
+    }
+
+    private void sendError(String destinationId, String code, String message) {
+        Map<String, Object> errorPayload = new HashMap<>();
+        errorPayload.put("code", code);
+        errorPayload.put("message", message);
+
+        // 이렇게 호출하면 컴파일러가 고민하지 않습니다.
+        messagingTemplate.convertAndSend("/topic/errors/" + destinationId, (Object) errorPayload);
     }
 }
