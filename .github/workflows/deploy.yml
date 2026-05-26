@@ -37,9 +37,6 @@ jobs:
         target: "/home/${{ secrets.SERVER_USER }}/app/backend"
         strip_components: 2
 
-# ---------------------------------------------------
-    # 🔥 1. 서버 1번 전용 재시작 스텝
-    # ---------------------------------------------------
     - name: Restart Application on Server 1
       uses: appleboy/ssh-action@master
       env:
@@ -47,7 +44,7 @@ jobs:
         DB_PW: ${{ secrets.SUPABASE_DB_PASSWORD }}
         GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
       with:
-        host: ${{ secrets.SERVER_IP_1 }} # 👈 1번 IP만!
+        host: ${{ secrets.SERVER_IP_1 }}
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         envs: DB_URL, DB_PW, GEMINI_KEY
@@ -58,9 +55,7 @@ jobs:
           export SUPABASE_DB_PASSWORD=$DB_PW
           export GEMINI_API_KEY=$GEMINI_KEY
           nohup java -jar /home/coj2025403/app/backend/*.jar --server.port=9090 --server.address=0.0.0.0 > /home/coj2025403/app/backend/nohup.out 2>&1 &
-    # ---------------------------------------------------
-    # 🔥 2. 서버 2번 전용 재시작 스텝 (위랑 똑같이 복붙 후 IP만 2번으로 변경!)
-    # ---------------------------------------------------
+
     - name: Restart Application on Server 2
       uses: appleboy/ssh-action@master
       env:
@@ -68,7 +63,7 @@ jobs:
         DB_PW: ${{ secrets.SUPABASE_DB_PASSWORD }}
         GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
       with:
-        host: ${{ secrets.SERVER_IP_2 }} # 👈 2번 IP만!
+        host: ${{ secrets.SERVER_IP_2 }}
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         envs: DB_URL, DB_PW, GEMINI_KEY
