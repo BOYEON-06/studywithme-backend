@@ -8,7 +8,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    defaults:
+      run:
+        working-directory: StudyWithMe # 모든 run 단계의 기본 경로를 폴더 내부로 설정
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -34,9 +37,9 @@ jobs:
           host: ${{ secrets.SERVER_IP_1 }},${{ secrets.SERVER_IP_2 }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "build/libs/*.jar"
-          target: "/home/${{ secrets.SERVER_USER }}/app/backend"
-          strip_components: 2
+          source: "StudyWithMe/build/libs/*.jar" # 폴더 경로 포함하여 전송
+          target: "/home/${{ secrets.SERVER_USER }}/app/"
+          strip_components: 1 # 경로 정리를 위해 1로 수정
 
       - name: Restart Application on ALL Servers
         uses: appleboy/ssh-action@master
@@ -55,4 +58,5 @@ jobs:
             export SUPABASE_DB_URL=$DB_URL
             export SUPABASE_DB_PASSWORD=$DB_PW
             export GEMINI_API_KEY=$GEMINI_KEY
+            # 파일 경로가 /home/coj2025403/app/backend/*.jar 인지 확인하십시오
             nohup java -jar /home/coj2025403/app/backend/*.jar --server.port=9090 --server.address=0.0.0.0 > /home/coj2025403/app/backend/nohup.out 2>&1 &
