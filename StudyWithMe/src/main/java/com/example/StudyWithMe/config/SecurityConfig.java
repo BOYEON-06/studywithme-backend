@@ -21,25 +21,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
     private final SessionRepositoryFilter<?> sessionRepositoryFilter;
 
-//    @Bean
-//    public CookieSerializer cookieSerializer() {
-//        DefaultCookieSerializer serializer = new DefaultCookieSerializer();
-//
-//        // 1. 프론트엔드가 익숙한 JSESSIONID로 이름 맞추기 (선택사항)
-//        serializer.setCookieName("JSESSIONID");
-//
-//        // 2. HTTP 환경(IP 주소)에서 포스트맨/브라우저가 튕겨내지 않도록 허용! (핵심)
-//        serializer.setUseSecureCookie(false);
-//
-//        // 3. 타 도메인(IP) 접근 허용
-//        serializer.setSameSite("Lax");
-//
-//        // 4. 모든 API 경로(/)에서 쿠키 들고 다니게 허용
-//        serializer.setCookiePath("/");
-//
-//        return serializer;
-//    }
-
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
