@@ -40,8 +40,12 @@ public class ChatController {
     ) {
         // 웹소켓 세션 속성에서 ID 추출
         Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
-        Long userId = (Long) sessionAttributes.get("userId");
+        if (sessionAttributes == null) {
+            sendError("anonymous", "SESSION_EXPIRED", "세션이 만료되었습니다.");
+            return;
+        }
 
+        Long userId = SessionUtil.getLoginUserIdFromSecurityContext(sessionAttributes);
         // 1. 로그인 체크
         if (userId == null) {
             Map<String, Object> errorPayload = new HashMap<>();
