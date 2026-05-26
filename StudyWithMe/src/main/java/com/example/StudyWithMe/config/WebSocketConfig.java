@@ -1,10 +1,12 @@
 package com.example.StudyWithMe.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -23,7 +25,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // 클라이언트가 소켓에 연결할 엔드포인트
         registry.addEndpoint("/ws-stomp")
+                .setAllowedOrigins("http://localhost:5173")
+                .setAllowedOrigins("http://34.22.71.200")
                 .setAllowedOriginPatterns("*")
-                .withSockJS();
+                .withSockJS()
+                .setInterceptors(httpSessionHandshakeInterceptor());
+    }
+
+    @Bean
+    public HttpSessionHandshakeInterceptor httpSessionHandshakeInterceptor() {
+        return new HttpSessionHandshakeInterceptor();
     }
 }

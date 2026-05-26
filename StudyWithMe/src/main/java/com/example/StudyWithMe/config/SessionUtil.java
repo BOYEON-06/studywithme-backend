@@ -37,4 +37,10 @@ public class SessionUtil {
 
         return null;
     }
+
+    // 웹소켓 세션에서 userId를 꺼내오는 메서드 추가
+    public static Long getLoginUserIdFromSecurityContext(Map<String, Object> sessionAttributes) {
+        // 인터셉터가 복사해 넣은 세션 데이터를 여기서 확인
+        return (Long) sessionAttributes.get("userId");
+    }
 }

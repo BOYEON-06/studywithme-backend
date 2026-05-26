@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
@@ -34,9 +35,12 @@ public class ChatController {
     @MessageMapping("/chat/{studyId}")
     public void sendMessage(
             @DestinationVariable Long studyId,
-            @Payload Map<String, String> payload
+            @Payload Map<String, String> payload,
+            SimpMessageHeaderAccessor headerAccessor
     ) {
-        Long userId = SessionUtil.getLoginUserIdFromSecurityContext();
+        // 웹소켓 세션 속성에서 ID 추출
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        Long userId = (Long) sessionAttributes.get("userId");
 
         // 1. 로그인 체크
         if (userId == null) {
