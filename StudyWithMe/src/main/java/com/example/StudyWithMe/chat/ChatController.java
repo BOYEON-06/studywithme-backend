@@ -1,6 +1,7 @@
 package com.example.StudyWithMe.chat;
 
-import com.example.StudyWithMe.config.PrincipalDetails;
+import com.example.StudyWithMe.config.SessionUtil;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,7 +10,6 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,10 +27,13 @@ public class ChatController {
     @MessageMapping("/chat/{studyId}")
     public ResponseEntity<?> sendMessage(
             @DestinationVariable Long studyId,
-            @Payload Map<String, String> payload,
-            @AuthenticationPrincipal PrincipalDetails principalDetails
+            @Payload Map<String, String> payload
+            // 💡 변경: 웹소켓은 HttpSession 직접 주입이 안 되므로 제거합니다.
     ) {
-        if (principalDetails == null) {
+        // 💡 변경: 시큐리티 홀더를 직접 찔러 억까 필터를 우회하여 안전하게 ID 낚아채기
+        Long userId = SessionUtil.getLoginUserIdFromSecurityContext();
+
+        if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("code", "LOGIN_REQUIRED", "message", "로그인이 필요합니다."));
         }
@@ -40,7 +43,7 @@ public class ChatController {
                     studyId,
                     payload.get("sender"),
                     payload.get("message"),
-                    principalDetails.getMember().getId()
+                    userId // 💡 변경
             );
 
             // 저장된 메시지 정보를 그대로 브로드캐스팅
@@ -61,7 +64,6 @@ public class ChatController {
                             "message", e.getMessage()
                     ));
         } catch (Exception e) {
-            // 3. 기타 예상치 못한 서버 에러
             return ResponseEntity.internalServerError()
                     .body(Map.of(
                             "code", "SERVER_ERROR",
@@ -73,17 +75,19 @@ public class ChatController {
     @GetMapping("/api/chat/{studyId}/history")
     public ResponseEntity<?> getChatHistory(
             @PathVariable Long studyId,
-            @AuthenticationPrincipal PrincipalDetails principalDetails
+            HttpSession session // 💡 변경: HttpSession 주입
     ) {
+        // 💡 변경: 세션 유틸 적용
+        Long userId = SessionUtil.getLoginUserId(session);
+
         // 1. 로그인 체크
-        if (principalDetails == null) {
+        if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
 
         // 2. 권한 체크
-        // chatService에 권한 체크 로직을 공통화 하는 게 나을 것 같음 (추후 변경 필요)
         try {
-            List<ChatResponseDTO> history = chatService.getChatHistory(studyId, principalDetails.getMember().getId());
+            List<ChatResponseDTO> history = chatService.getChatHistory(studyId, userId); // 💡 변경
             return ResponseEntity.ok(history);
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)

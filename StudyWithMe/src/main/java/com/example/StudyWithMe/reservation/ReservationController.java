@@ -3,15 +3,13 @@ package com.example.StudyWithMe.reservation;
 import com.example.StudyWithMe.ai.AiAssignmentResponseDTO;
 import com.example.StudyWithMe.ai.AiParameterDTO;
 import com.example.StudyWithMe.ai.GeminiService;
-import com.example.StudyWithMe.assignment.StudyLeaderGroupResponseDTO;
-import com.example.StudyWithMe.config.PrincipalDetails;
+import com.example.StudyWithMe.config.SessionUtil;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 @RestController
 @RequestMapping("/api/reservation-tasks")
@@ -25,9 +23,11 @@ public class ReservationController {
     @PostMapping("/generate-ai")
     public ResponseEntity<?> getAiSuggestion(
             @RequestBody AiParameterDTO request,
-            @AuthenticationPrincipal PrincipalDetails principalDetails
+            HttpSession session // 💡 변경: HttpSession 주입
     ) {
-        if (principalDetails == null) {
+        Long userId = SessionUtil.getLoginUserId(session); // 💡 변경: 세션 유틸 적용
+
+        if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("code", "LOGIN_REQUIRED", "message", "로그인이 필요합니다."));
         }
@@ -43,9 +43,11 @@ public class ReservationController {
     public ResponseEntity<?> confirmAiReservationTask(
             @PathVariable Long studyId,
             @RequestBody ReservationRequestDTO dto,
-            @AuthenticationPrincipal PrincipalDetails principalDetails
+            HttpSession session // 💡 변경: HttpSession 주입
     ) {
-        if (principalDetails == null) {
+        Long userId = SessionUtil.getLoginUserId(session); // 💡 변경: 세션 유틸 적용
+
+        if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "로그인이 필요합니다."));
         }
@@ -54,7 +56,7 @@ public class ReservationController {
             Long taskId = reservationService.createReservationTask(
                     studyId,
                     dto,
-                    principalDetails.getMember().getId()
+                    userId // 💡 변경: 추출한 userId 전달
             );
 
             return ResponseEntity.ok(Map.of(
@@ -85,28 +87,17 @@ public class ReservationController {
     @PostMapping("/{taskId}/submissions")
     public ResponseEntity<Void> submitLiveTask(
             @PathVariable Long taskId,
-            @RequestParam Long userId, // 필요시 @AuthenticationPrincipal로 변경 가능
+            HttpSession session, // 💡 변경: 억까 방지를 위해 임시 @RequestParam 대신 정석 세션 구조로 통일
             @RequestBody ReservationSubmitRequestDTO request) {
+
+        Long userId = SessionUtil.getLoginUserId(session); // 💡 변경: 세션 유틸 적용
+
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
         reservationService.submitTask(taskId, userId, request);
         return ResponseEntity.ok().build();
     }
-
-//    @GetMapping("/leader")
-//    public ResponseEntity<?> getLeaderAssignments(
-//            @AuthenticationPrincipal PrincipalDetails principalDetails
-//    ) {
-//        if (principalDetails == null) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//        }
-//
-//        try {
-//            List<StudyLeaderGroupResponseDTO> responses =
-//                    assignmentService.getAssignmentsByLeader(principalDetails.getMember().getId());
-//            return ResponseEntity.ok(responses);
-//        } catch (Exception e) {
-//            return ResponseEntity.badRequest().body(e.getMessage());
-//        }
-//    }
 
 }

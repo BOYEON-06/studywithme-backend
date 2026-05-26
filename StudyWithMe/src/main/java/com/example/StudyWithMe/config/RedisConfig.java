@@ -1,16 +1,27 @@
 package com.example.StudyWithMe.config;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.security.jackson.SecurityJacksonModules;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
+import org.springframework.session.web.http.CookieSerializer;
+import org.springframework.session.web.http.DefaultCookieSerializer;
+import org.springframework.web.filter.DelegatingFilterProxy;
+import tools.jackson.databind.DatabindContext;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.jsontype.PolymorphicTypeValidator;
 
 @Configuration
-@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 1800) // 세션 만료 시간 30분
+@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 1800)
 public class RedisConfig {
 
     @Value("${spring.data.redis.host}")
@@ -24,27 +35,81 @@ public class RedisConfig {
         return new LettuceConnectionFactory(redisHost, redisPort);
     }
 
-    /*
-     * 🕵️‍♂️ [핵심 포인트]
-     * 원래 있던 springSessionDefaultRedisSerializer() 빈은 아예 삭제했습니다!
-     * 이렇게 지워버리면, 스프링 시큐리티는 알아서 가장 안전한 '기본 직렬화기(JDK)'를 써서
-     * 복잡한 로그인 정보를 서버 1, 2번 사이에서 완벽하게 공유합니다. (401 에러 해결!)
-     */
+    @Bean
+    public CookieSerializer cookieSerializer() {
+        DefaultCookieSerializer serializer = new DefaultCookieSerializer();
+        serializer.setCookieName("JSESSIONID");
+        serializer.setCookiePath("/");
+        serializer.setUseBase64Encoding(false); // 순수 UUID 텍스트 오가도록 설정
+        return serializer;
+    }
+
+    @Bean
+    public FilterRegistrationBean<DelegatingFilterProxy> springSessionRepositoryFilterRegistration() {
+        FilterRegistrationBean<DelegatingFilterProxy> registration = new FilterRegistrationBean<>();
+        registration.setFilter(new DelegatingFilterProxy("springSessionRepositoryFilter"));
+        registration.addUrlPatterns("/*");
+        registration.setOrder(Integer.MIN_VALUE); // 최우선 순위로 필터 배치
+        registration.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ASYNC);
+        return registration;
+    }
 
     /**
-     * 🚀 개발자가 소스코드에서 캐시 등 다용도로 직접 사용할 RedisTemplate
-     * (이건 로그인 세션과는 완전히 별개로 동작하므로 안심하고 써도 됩니다!)
+     * 1. Jackson 3.x 규격의 ObjectMapper 빈 등록
      */
     @Bean
-    public RedisTemplate<String, Object> redisTemplate() {
+    public ObjectMapper redisObjectMapper() {
+        ClassLoader loader = getClass().getClassLoader();
+
+        PolymorphicTypeValidator ptv = new PolymorphicTypeValidator() {
+            @Override
+            public Validity validateBaseType(DatabindContext ctxt, JavaType baseType) { return Validity.ALLOWED; }
+            @Override
+            public Validity validateSubClassName(DatabindContext ctxt, JavaType baseType, String subClassName) { return Validity.ALLOWED; }
+            @Override
+            public Validity validateSubType(DatabindContext ctxt, JavaType baseType, JavaType subType) { return Validity.ALLOWED; }
+        };
+
+        return JsonMapper.builder()
+                // [공식 문서 마이그레이션 가이드 적용]
+                // 1. 3.x 규칙에 따라 tools.jackson.databind.DefaultTyping을 직접 경유합니다.
+                // 2. 스프링 시큐리티 컨텍스트 복원을 위해 NON_CONCRETE_AND_ARRAYS 스코프와 프로퍼티 속성명("@class")을 명시합니다.
+                .activateDefaultTypingAsProperty(
+                        ptv,
+                        tools.jackson.databind.DefaultTyping.NON_CONCRETE_AND_ARRAYS,
+                        "@class"
+                )
+                .addModules(SecurityJacksonModules.getModules(loader))
+                .build();
+    }
+
+    /**
+     * 2. 💡 스프링 세션 레디스 전용 직렬화기 최종 바인딩
+     * (메서드 중복 제거 및 Jackson 3.x에 대응하는 GenericJacksonJsonRedisSerializer 채택)
+     */
+    @Bean(name = "springSessionDefaultRedisSerializer")
+    public RedisSerializer<Object> springSessionDefaultRedisSerializer(ObjectMapper redisObjectMapper) {
+        // 💡 우리가 커스텀한 redisObjectMapper를 내장시켜 Map 뭉개짐을 완벽 방어합니다.
+        return new GenericJacksonJsonRedisSerializer(redisObjectMapper);
+    }
+
+    /**
+     * 3. 일반 개발용 RedisTemplate 설정
+     */
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(
+            RedisConnectionFactory connectionFactory,
+            RedisSerializer<Object> springSessionDefaultRedisSerializer
+    ) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-        redisTemplate.setConnectionFactory(redisConnectionFactory());
+        redisTemplate.setConnectionFactory(connectionFactory);
 
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
 
-        redisTemplate.setValueSerializer(new org.springframework.data.redis.serializer.JdkSerializationRedisSerializer());
-        redisTemplate.setHashValueSerializer(new org.springframework.data.redis.serializer.JdkSerializationRedisSerializer());
+        // 세션 직렬화 장치와 싱크를 완벽히 일치시킴
+        redisTemplate.setValueSerializer(springSessionDefaultRedisSerializer);
+        redisTemplate.setHashValueSerializer(springSessionDefaultRedisSerializer);
 
         return redisTemplate;
     }

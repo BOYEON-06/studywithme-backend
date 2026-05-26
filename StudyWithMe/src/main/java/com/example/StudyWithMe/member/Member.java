@@ -2,7 +2,9 @@ package com.example.StudyWithMe.member;
 
 import com.example.StudyWithMe.study.StudyGroup;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -10,11 +12,12 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.Serializable;
 
 @Entity
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true, value = {"hibernateLazyInitializer", "handler"})
 public class Member implements Serializable {
     private static final long serialVersionUID = 1L;
 
