@@ -97,9 +97,13 @@ public class AssignmentService {
         // 2. 각 과제별로 나의 제출 여부를 확인하여 DTO로 변환
         return assignments.stream()
                 .map(assignment -> {
-                    boolean submitted = submissionRepository.existsByAssignmentIdAndMemberId(
-                            assignment.getId(), memberId);
-                    return AssignmentResponseDTO.of(assignment, submitted);
+                    // 1. 제출 정보(Submission)를 DB에서 조회
+                    AssignmentSubmission submission = submissionRepository
+                            .findByAssignmentIdAndMemberId(assignment.getId(), memberId)
+                            .orElse(null); // 제출하지 않았으면 null 반환
+
+                    // 2. 조회된 submission 객체를 DTO 생성자로 전달
+                    return AssignmentResponseDTO.of(assignment, submission);
                 })
                 .toList();
     }

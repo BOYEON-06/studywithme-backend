@@ -57,7 +57,10 @@ public class AssignmentController {
             @RequestBody AssignmentRequestDTO dto,
             HttpSession session // 💡 변경: HttpSession 주입
     ) {
-        Long userId = SessionUtil.getLoginUserId(session); // 💡 변경: 세션 유틸 적용
+        System.out.println("세션 ID: " + session.getId());
+        System.out.println("세션 내 유저 ID: " + session.getAttribute("YOUR_SESSION_KEY"));
+
+        Long userId = SessionUtil.getLoginUserId(session);
 
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
