@@ -1,12 +1,17 @@
 package com.example.StudyWithMe.config;
 
 import com.example.StudyWithMe.member.Member;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.ArrayList;
+
+@Getter
 public class PrincipalDetails implements UserDetails, Serializable {
     private static final long serialVersionUID = 1L;
 
