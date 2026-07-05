@@ -18,7 +18,7 @@ public record AssignmentResponseDTO(
         String feedback,
         LocalDateTime gradedAt
 ) {
-    // 1. 기존처럼 제출 여부만 알 때 (과제 목록 조회 등)
+    // 제출 여부만 알 때 (과제 목록 조회 등)
     public static AssignmentResponseDTO of(Assignment assignment, boolean isSubmitted) {
         return new AssignmentResponseDTO(
                 assignment.getStudyGroup().getId(),
@@ -28,13 +28,13 @@ public record AssignmentResponseDTO(
                 assignment.getTitle(),
                 assignment.getContent(),
                 assignment.getDueDate(),
-                assignment.getDueDate().isBefore(LocalDateTime.now()),
+                assignment.getDueDate() != null && assignment.getDueDate().isBefore(LocalDateTime.now()),
                 isSubmitted,
                 null, null, null, null, null // 상세 정보는 없으므로 null
         );
     }
 
-    // 2. 제출물 정보가 있을 때 (채점 화면, 과제 상세 조회 등)
+    // 제출물 정보가 있을 때 (채점 화면, 과제 상세 조회 등)
     public static AssignmentResponseDTO of(Assignment assignment, AssignmentSubmission submission) {
         return new AssignmentResponseDTO(
                 assignment.getStudyGroup().getId(),
@@ -44,7 +44,7 @@ public record AssignmentResponseDTO(
                 assignment.getTitle(),
                 assignment.getContent(),
                 assignment.getDueDate(),
-                assignment.getDueDate().isBefore(LocalDateTime.now()),
+                assignment.getDueDate() != null && assignment.getDueDate().isBefore(LocalDateTime.now()),
                 submission != null,
                 submission != null ? submission.getContent() : null,
                 submission != null ? submission.getSubmittedAt() : null,

@@ -96,6 +96,7 @@ public class AssignmentService {
 
         // 2. 각 과제별로 나의 제출 여부를 확인하여 DTO로 변환
         return assignments.stream()
+                .filter(assignment -> assignment.getDueDate() != null)
                 .map(assignment -> {
                     // 1. 제출 정보(Submission)를 DB에서 조회
                     AssignmentSubmission submission = submissionRepository
@@ -155,12 +156,15 @@ public class AssignmentService {
                                 // 기존 AssignmentResponseDTO 활용
                                 AssignmentResponseDTO assignmentDto = AssignmentResponseDTO.of(assignment, true);
 
+                                // 엔티티에서 직접 모범 답안 추출
+                                String modelAnswer = assignment.getModelAnswer();
+
                                 // 기존 SubmissionResponseDTO 활용
                                 List<SubmissionResponseDTO> submissionDtos = assignEntry.getValue().stream()
                                         .map(s -> SubmissionResponseDTO.from(s, s.getMember().getName()))
                                         .toList();
 
-                                return new AssignmentGroupResponseDTO(assignmentDto, submissionDtos);
+                                return new AssignmentGroupResponseDTO(assignmentDto, modelAnswer, submissionDtos);
                             }).toList();
 
                     return new StudyLeaderGroupResponseDTO(

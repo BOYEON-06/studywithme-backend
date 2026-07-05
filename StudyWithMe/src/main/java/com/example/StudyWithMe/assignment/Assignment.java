@@ -24,7 +24,7 @@ public class Assignment {
     private String content;
 
     @Column(columnDefinition = "TEXT")
-    private String modelAnswer; // 방장 참고용 AI 제안 모범 답안
+    private String modelAnswer; // 스터디장 참고용 AI 제안 모범 답안
 
     private LocalDateTime createdAt;
 

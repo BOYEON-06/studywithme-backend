@@ -238,16 +238,17 @@ public class AssignmentController {
 
     @GetMapping("/leader")
     public ResponseEntity<?> getLeaderAssignments(
-            HttpSession session // 💡 변경: HttpSession 주입
+            HttpSession session // HttpSession 주입
     ) {
-        Long userId = SessionUtil.getLoginUserId(session); // 💡 변경: 세션 유틸 적용
+        Long userId = SessionUtil.getLoginUserId(session); //  세션 유틸 적용
+
 
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         try {
-            List<StudyLeaderGroupResponseDTO> responses = assignmentService.getAssignmentsByLeader(userId); // 💡 변경
+            List<StudyLeaderGroupResponseDTO> responses = assignmentService.getAssignmentsByLeader(userId);
             return ResponseEntity.ok(responses);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
