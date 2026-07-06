@@ -54,21 +54,66 @@ public class StudyService {
         return studyGroup.getTitle();
     }
 
+    @Transactional
+    public void deleteStudy(Long studyId, Long memberId) {
+        StudyGroup existingStudy = studyGroupRepository.findById(studyId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 스터디입니다."));
+
+        if (!existingStudy.getCreator().getId().equals(memberId)) {
+            throw new IllegalStateException("스터디 삭제 권한이 없습니다.");
+        }
+
+        // 다대다 중간 테이블 정리를 위한 참여자 목록 비우기
+        existingStudy.getParticipants().clear();
+
+
+        studyGroupRepository.delete(existingStudy);
+    }
+
+
     @Transactional(readOnly = true)
-    public List<MemberStudyListDTO> getMyStudyList(Long memberId) {
-        // 1. 세션이 살아있는 상태에서 다시 조회
+    public List<StudyListDTO> getMyStudyList(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 유저가 없습니다."));
 
-        // 2. 세션이 열려있으므로 Lazy Loading이 정상 작동함
         return member.getMyStudies().stream()
-                .map(study -> new MemberStudyListDTO(
-                        study.getId(),
-                        study.getTitle(),
-                        study.getDescription(),
-                        study.getInviteCode(),
-                        study.getCreator().getName()
-                ))
+                .map(study -> {
+                    List<StudyMemberDTO> participantDTOs = study.getParticipants().stream()
+                            .map(p -> new StudyMemberDTO(p.getId(), p.getName()))
+                            .collect(Collectors.toList());
+
+                    return new StudyListDTO(
+                            study.getId(),
+                            study.getTitle(),
+                            study.getDescription(),
+                            study.getInviteCode(),
+                            study.getCreator().getName(),
+                            participantDTOs
+                    );
+                })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void removeMemberFromStudy(Long studyId, Long targetMemberId, Long loginUserId) {
+        StudyGroup studyGroup = studyGroupRepository.findById(studyId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 스터디입니다."));
+
+        if (!studyGroup.getCreator().getId().equals(loginUserId)) {
+            throw new IllegalStateException("멤버를 제외할 권한이 없습니다.");
+        }
+
+        if (targetMemberId.equals(loginUserId)) {
+            throw new IllegalStateException("스터디장은 자기 자신을 멤버 목록에서 제외할 수 없습니다.");
+        }
+
+        Member targetMember = memberRepository.findById(targetMemberId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+
+        boolean removed = studyGroup.getParticipants().removeIf(member -> member.getId().equals(targetMemberId));
+
+        if (!removed) {
+            throw new IllegalArgumentException("해당 회원은 이 스터디의 참여자가 아닙니다.");
+        }
     }
 }

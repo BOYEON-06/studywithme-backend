@@ -24,9 +24,8 @@ public class StudyController {
     @PostMapping("/create")
     public ResponseEntity<?> create(
             @RequestBody Map<String, String> request,
-            HttpSession session // 💡 유지
+            HttpSession session
     ) {
-        // 💡 [개선] SessionUtil을 사용하여 깔끔하게 ID 한줄 요약
         Long userId = SessionUtil.getLoginUserId(session);
 
         if (userId == null) {
@@ -34,7 +33,6 @@ public class StudyController {
         }
 
         try {
-            // 안전하게 찾은 ID로 순정 엔티티를 하나 복원해옵니다.
             Member currentMember = memberRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
 
@@ -59,9 +57,9 @@ public class StudyController {
     @PostMapping("/join")
     public ResponseEntity<?> join(
             @RequestBody Map<String, String> request,
-            HttpSession session // 💡 변경: @AuthenticationPrincipal 걷어내고 HttpSession 주입
+            HttpSession session
     ) {
-        // 💡 [변경] 시큐리티 억까 필터를 우회하기 위해 세션 유틸로 ID 추출
+        // 세션 유틸로 ID 추출
         Long userId = SessionUtil.getLoginUserId(session);
 
         if (userId == null) {
@@ -91,12 +89,32 @@ public class StudyController {
         }
     }
 
+    @DeleteMapping("/{studyId}")
+    public ResponseEntity<?> delete(
+            @PathVariable Long studyId,
+            HttpSession session
+    ) {
+        Long userId = SessionUtil.getLoginUserId(session);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        }
+
+        try {
+            // 2. 서비스에 스터디 ID와 요청한 유저 ID를 함께 전달
+            studyService.deleteStudy(studyId, userId);
+            return ResponseEntity.noContent().build(); // 204 No Content
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage()); // 403 권한 없음
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("스터디 삭제 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/mystudylist")
-    public ResponseEntity<?> getMyStudies(HttpSession session) { // 💡 유지
-
-        System.out.println("====== [디버깅] mystudylist 요청 들어옴 ======");
-
-        // 💡 [개선] 노가다 if-else instanceof 분기 로직을 싹 날리고 유틸로 한방에 해결!
+    public ResponseEntity<?> getMyStudies(HttpSession session) {
         Long userId = SessionUtil.getLoginUserId(session);
 
         if (userId == null) {
@@ -104,11 +122,34 @@ public class StudyController {
         }
 
         try {
-            // 💡 안전하게 추출한 유저 식별자 ID를 서비스에 주입합니다!
-            List<MemberStudyListDTO> myStudies = studyService.getMyStudyList(userId);
+            List<StudyListDTO> myStudies = studyService.getMyStudyList(userId);
             return ResponseEntity.ok(myStudies);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("목록을 불러오는 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{studyId}/members/{memberId}")
+    public ResponseEntity<?> deleteMember(
+            @PathVariable Long studyId,
+            @PathVariable Long memberId,
+            HttpSession session
+    ) {
+        Long loginUserId = SessionUtil.getLoginUserId(session);
+        if (loginUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        }
+
+        try {
+            studyService.removeMemberFromStudy(studyId, memberId, loginUserId);
+            return ResponseEntity.ok(Map.of("message", "해당 멤버가 스터디에서 성공적으로 제외되었습니다."));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage()); // 권한 없음 (403)
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("멤버 제외 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.StudyWithMe.study;
 
+import com.example.StudyWithMe.assignment.Assignment;
+import com.example.StudyWithMe.reservation.Reservation;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,7 +27,7 @@ public class StudyGroup implements Serializable {
     @Column(unique = true)
     private String inviteCode;  // 참여 코드 (랜덤 생성)
 
-    // 스터디를 만든 사람 (Member 엔티티와 연결)
+    // 스터디를 만든 사람 (Memer 엔티티와 연결)
     @ManyToOne
     @JoinColumn(name = "creator_id")
     private Member creator;
@@ -38,6 +40,13 @@ public class StudyGroup implements Serializable {
             inverseJoinColumns = @JoinColumn(name = "member_id")
     )
     private List<Member> participants = new ArrayList<>();
+
+    // 스터디 삭제 시, 과제도 삭제 처리 진행
+    @OneToMany(mappedBy = "studyGroup", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Assignment> assignments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "studyGroup", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Reservation> reservations = new ArrayList<>();
 
     // 스터디 생성 시 호출할 메서드
     public void generateInviteCode() {
